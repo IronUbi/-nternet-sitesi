@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kripto Para Grafikleri</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .crypto-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .crypto-selector select {
+            padding: 8px 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        
+        .price-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            gap: 10px;
+        }
+        
+        .current-price {
+            font-weight: bold;
+            color: #2a9d8f;
+        }
+        
+        .time-selector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .time-selector button {
+            padding: 8px 15px;
+            border: none;
+            background-color: #e9e9e9;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .time-selector button:hover {
+            background-color: #d4d4d4;
+        }
+        
+        .time-selector button.active {
+            background-color: #2a9d8f;
+            color: white;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 60vh;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+        
+        .error-message {
+            color: #e63946;
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+        }
+        
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            display: none;
+        }
+        
+        .analyze-button {
+            background-color: #4361ee;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .analyze-button:hover {
+            background-color: #3a56d4;
+        }
+        
+        /* Analiz Aracı Stilleri */
+        #analyzerTool {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 800px;
+            height: 80%;
+            max-height: 600px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: none;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        .analyzer-drag-handle {
+            background-color: #4361ee;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .analyzer-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .analyzer-minimize {
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .analyzer-container {
+            padding: 20px;
+            height: calc(100% - 50px);
+            overflow-y: auto;
+        }
+        
+        .analyzer-loading {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        
+        .analyzer-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid #4361ee;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .analyzer-hidden {
+            display: none;
+        }
+        
+        .analyzer-alert-box {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .analyzer-alert-low {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        
+        .analyzer-alert-medium {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        
+        .analyzer-alert-high {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        
+        .analyzer-summary-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .analyzer-risk-meter {
+            height: 20px;
+            background-color: #e9e9e9;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .analyzer-risk-level {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            transition: width 0.5s;
+        }
+        
+        .analyzer-risk-low-level {
+            background-color: #2a9d8f;
+        }
+        
+        .analyzer-risk-medium-level {
+            background-color: #e9c46a;
+        }
+        
+        .analyzer-risk-high-level {
+            background-color: #e76f51;
+        }
+        
+        .analyzer-data-source {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            margin-top: 10px;
+        }
+        
+        .analyzer-tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .analyzer-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .analyzer-tab.active {
+            border-bottom-color: #4361ee;
+            color: #4361ee;
+            font-weight: bold;
+        }
+        
+        .analyzer-tab-content {
+            display: none;
+        }
+        
+        .analyzer-tab-content.active {
+            display: block;
+        }
+        
+        .analyzer-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .analyzer-indicator-name {
+            font-weight: bold;
+        }
+        
+        .analyzer-value-positive {
+            color: #2a9d8f;
+        }
+        
+        .analyzer-value-negative {
+            color: #e63946;
+        }
+        
+        .analyzer-value-neutral {
+            color: #666;
+        }
+        
+        .analyzer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .analyzer-table th, .analyzer-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .analyzer-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .analyzer-report-section {
+            margin-top: 20px;
+        }
+        
+        .analyzer-minimized {
+            height: auto !important;
+        }
+        
+        .analyzer-minimized .analyzer-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kripto Para Grafikleri</h1>
+
+        <div class="crypto-selector">
+            <label for="cryptoSelect">Kripto Para Seçin:</label>
+            <select id="cryptoSelect" onchange="fetchCryptoData()">
+                <option value="" disabled selected>Yükleniyor...</option>
+            </select>
+        </div>
+
+        <div class="price-info">
+            <div>Güncel Fiyat:</div>
+            <div class="current-price" id="currentPrice">-</div>
+        </div>
+
+        <div class="time-selector">
+            <button data-days="1" data-interval="h1" class="active">24 Saat</button>
+            <button data-days="7" data-interval="h1">Haftalık</button>
+            <button data-days="30" data-interval="d1">Aylık</button>
+            <button data-days="180" data-interval="d1">6 Aylık</button>
+            <button data-days="365" data-interval="d1">Yıllık</button>
+            <button data-days="max" data-interval="d1" class="max-history-button">Maksimum Geçmiş</button>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="cryptoChart"></canvas>
+        </div>
+
+        <div id="loading" class="loading">Veriler yükleniyor, lütfen bekleyin...</div>
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        <div id="debugInfo" class="debug-info"></div>
+
+        <div style="margin-top: 20px; text-align: center;">
+            <button onclick="toggleDebugInfo()" style="margin-left: 10px;">Debug Bilgisi</button>
+            <button onclick="openAnalyzerWindow()" class="analyze-button" style="margin-left: 10px;">Grafik Analiz Aracını Aç</button>
+        </div>
+    </div>
+
+    <!-- Analiz Aracı -->
+    <div id="analyzerTool">
+        <div class="analyzer-drag-handle">
+            Kripto Grafik Analiz Aracı
+            <button class="analyzer-minimize" id="analyzerMinimizeButton">_</button>
+        </div>
+        <button class="analyzer-close" id="analyzerCloseButton">X</button>
+        
+        <div class="analyzer-container" id="analyzerMainContainer">
+            <div id="analyzerLoadingIndicator" class="analyzer-loading analyzer-hidden">
+                <div class="analyzer-spinner"></div>
+                <p>Grafik analiz ediliyor...</p>
+            </div>
+            
+            <div id="analyzerReportContainer" class="analyzer-hidden">
+                <div id="analyzerAlertBox" class="analyzer-alert-box analyzer-alert-medium">
+                    Orta seviye volatilite tespit edildi. Dikkatli olunmalı.
+                </div>
+                
+                <div class="analyzer-summary-box">
+                    <h4>Analiz Özeti</h4>
+                    <p id="analyzerSummaryText">Grafik analizi tamamlandı.</p>
+                    
+                    <div>
+                        <p>Risk Skoru:</p>
+                        <div class="analyzer-risk-meter">
+                            <div id="analyzerRiskLevelIndicator" class="analyzer-risk-level analyzer-risk-medium-level" style="width: 65%;">
+                                <span class="analyzer-risk-label">65/100</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="analyzer-data-source">
+                        Son analiz: <span id="analyzerLastUpdated">-</span>
+                    </div>
+                </div>
+                
+                <div class="analyzer-tabs">
+                    <div class="analyzer-tab active" data-tab="analyzerTechnical">Teknik</div>
+                    <div class="analyzer-tab" data-tab="analyzerPatterns">Formasyonlar</div>
+                    <div class="analyzer-tab" data-tab="analyzerRecommendations">Öneriler</div>
+                </div>
+                
+                <div id="analyzerTechnical" class="analyzer-tab-content active">
+                    <h4>Teknik Göstergeler</h4>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">RSI (14)</span>
+                        <span id="analyzerRsiValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">MACD</span>
+                        <span id="analyzerMacdValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">Hareketli Ortalama (50/200)</span>
+                        <span id="analyzerMaValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">Bollinger Bantları</span>
+                        <span id="analyzerBollingerValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">Hacim Değişimi</span>
+                        <span id="analyzerVolumeValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <div class="analyzer-indicator">
+                        <span class="analyzer-indicator-name">Momentum</span>
+                        <span id="analyzerMomentumValue" class="analyzer-indicator-value analyzer-value-neutral">-</span>
+                    </div>
+                    
+                    <h4>Destek ve Direnç Seviyeleri</h4>
+                    <table id="analyzerSupportResistanceTable" class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Tip</th>
+                                <th>Seviye</th>
+                                <th>Güç</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Destek ve direnç seviyeleri burada listelenecek -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="analyzerPatterns" class="analyzer-tab-content">
+                    <h4>Tespit Edilen Formasyonlar</h4>
+                    <table id="analyzerPatternsTable" class="analyzer-table">
+                        <thead>
+                            <tr>
+                                <th>Formasyon</th>
+                                <th>Sinyal</th>
+                                <th>Güvenilirlik</th>
+                                <th>Kırılma Fiyatı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Formasyonlar burada listelenecek -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="analyzer-report-section">
+                        <h4>Trend Analizi</h4>
+                        <div id="analyzerTrendAnalysis">
+                            <!-- Trend analizi burada gösterilecek -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="analyzerRecommendations" class="analyzer-tab-content">
+                    <h4>İşlem Önerileri</h4>
+                    <div id="analyzerTradingRecommendations">
+                        <!-- İşlem önerileri burada gösterilecek -->
+                    </div>
+                    
+                    <div class="analyzer-report-section">
+                        <h4>Risk Yönetimi</h4>
+                        <div id="analyzerRiskManagement">
+                            <!-- Risk yönetimi önerileri burada gösterilecek -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global değişkenler
+        let cryptoChart = null;
+        let currentCrypto = "bitcoin"; // Varsayılan kripto para
+        let currentTimeFrame = {
+            days: 1,
+            interval: 'h1'
+        };
+        let chartPriceData = []; // Grafik fiyat verilerini saklamak için
+        let chartVolumeData = []; // Hacim verilerini saklamak için
+
+        // Sayfa yüklendiğinde çalışacak fonksiyon
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchCryptoList(); // Kripto para listesini çek
+
+            // Zaman dilimi butonlarına tıklama olayı ekle
+            document.querySelectorAll('.time-selector button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Aktif butonu güncelle
+                    document.querySelectorAll('.time-selector button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+
+                    // Yeni zaman dilimini al ve veriyi güncelle
+                    const days = this.getAttribute('data-days');
+                    const interval = this.getAttribute('data-interval');
+                    currentTimeFrame.days = days;
+                    currentTimeFrame.interval = interval;
+
+                    fetchCryptoData();
+                });
+            });
+            
+            // Analiz aracı sekme değiştirme işlevi
+            document.querySelectorAll('.analyzer-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Aktif sekmeyi güncelle
+                    document.querySelectorAll('.analyzer-tab').forEach(t => {
+                        t.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    
+                    // İlgili içeriği göster
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.analyzer-tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        });
+
+        // Kripto para listesini çeken fonksiyon
+        function fetchCryptoList() {
+            const apiUrl = "https://api.coincap.io/v2/assets";
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API isteği başarısız oldu: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const cryptoSelect = document.getElementById('cryptoSelect');
+                    cryptoSelect.innerHTML = ""; // Mevcut seçenekleri temizle
+
+                    // Kripto para verilerini sakla
+                    data.data.forEach(crypto => {
+                        const option = document.createElement('option');
+                        option.value = crypto.id;
+                        option.textContent = `${crypto.name} (${crypto.symbol.toUpperCase()})`;
+                        cryptoSelect.appendChild(option);
+                    });
+
+                    // Varsayılan olarak Bitcoin'i seç
+                    cryptoSelect.value = "bitcoin";
+
+                    // Güncel fiyatı göster
+                    updateCurrentPrice("bitcoin");
+
+                    // İlk veri yüklemesi
+                    fetchCryptoData();
+                })
+                .catch(error => {
+                    console.error("Kripto para listesi alınamadı:", error);
+                    document.getElementById('errorMessage').textContent = "Kripto para listesi alınamadı: " + error.message;
+                    document.getElementById('errorMessage').style.display = 'block';
+                });
+        }
+
+        // Güncel fiyatı güncelleyen fonksiyon
+        function updateCurrentPrice(cryptoId) {
+            const apiUrl = `https://api.coincap.io/v2/assets/${cryptoId}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const price = parseFloat(data.data.priceUsd);
+                    document.getElementById('currentPrice').textContent = `$${price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                });
+        }
+
+        // Seçilen kripto paranın verilerini çeken fonksiyon
+        function fetchCryptoData() {
+            const cryptoSelect = document.getElementById('cryptoSelect');
+            currentCrypto = cryptoSelect.value || "bitcoin"; // Seçilen kripto para
+
+            // Güncel fiyatı güncelle
+            updateCurrentPrice(currentCrypto);
+
+            // Hata mesajını temizle
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('debugInfo').innerHTML = '';
+
+            // Yükleniyor mesajını göster
+            document.getElementById('loading').style.display = 'block';
+
+            if (currentTimeFrame.days === 'max') {
+                fetchMaxHistoryData(currentCrypto);
+            } else {
+                fetchTimeRangeData(currentCrypto, currentTimeFrame.days, currentTimeFrame.interval);
+            }
+        }
+
+        // Belirli bir zaman aralığı için veri çeken fonksiyon
+        function fetchTimeRangeData(cryptoId, days, interval) {
+            const now = new Date().getTime();
+            const start = now - (days * 24 * 60 * 60 * 1000);
+            const apiUrl = `https://api.coincap.io/v2/assets/${cryptoId}/history?interval=${interval}&start=${start}&end=${now}`;
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API isteği başarısız oldu: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const prices = data.data.map(item => [
+                        new Date(item.time).getTime(),
+                        parseFloat(item.priceUsd)
+                    ]);
+                    
+                    // Fiyat verilerini global değişkene kaydet
+                    chartPriceData = data.data.map(item => ({
+                        time: new Date(item.time),
+                        price: parseFloat(item.priceUsd)
+                    }));
+
+                    // Hacim verilerini çek
+                    fetchVolumeData(cryptoId, start, now, interval, prices);
+                })
+                .catch(error => {
+                    console.error("Veri alınamadı:", error);
+                    document.getElementById('errorMessage').textContent = "Veri alınamadı: " + error.message;
+                    document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
+        // Hacim verilerini çeken fonksiyon
+        function fetchVolumeData(cryptoId, start, end, interval, prices) {
+            // CoinCap API'si doğrudan hacim verisi sağlamıyor, bu nedenle alternatif bir yaklaşım kullanıyoruz
+            // Gerçek bir uygulamada, hacim verilerini sağlayan başka bir API kullanabilirsiniz
+            
+            // Şimdilik, fiyat değişimlerine dayalı simüle edilmiş hacim verileri oluşturalım
+            const volumes = [];
+            for (let i = 1; i < prices.length; i++) {
+                const priceChange = Math.abs(prices[i][1] - prices[i-1][1]);
+                const baseVolume = prices[i][1] * 1000; // Basit bir hacim tahmini
+                const volume = baseVolume * (1 + priceChange / prices[i][1]);
+                volumes.push([prices[i][0], volume]);
+            }
+            
+            // Hacim verilerini global değişkene kaydet
+            chartVolumeData = volumes.map(item => ({
+                time: new Date(item[0]),
+                volume: item[1]
+            }));
+            
+            // Grafiği güncelle
+            updateChart(prices, false, currentCrypto);
+            
+            // Yükleniyor mesajını gizle
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Maksimum geçmiş verisi çeken fonksiyon
+        function fetchMaxHistoryData(cryptoId) {
+            const now = new Date().getTime();
+            const startDate = new Date('2015-01-01').getTime(); // Bitcoin için başlangıç tarihi
+            const apiUrl = `https://api.coincap.io/v2/assets/${cryptoId}/history?interval=d1&start=${startDate}&end=${now}`;
+
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API isteği başarısız oldu: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const prices = data.data.map(item => [
+                        new Date(item.time).getTime(),
+                        parseFloat(item.priceUsd)
+                    ]);
+
+                    // Fiyat verilerini global değişkene kaydet
+                    chartPriceData = data.data.map(item => ({
+                        time: new Date(item.time),
+                        price: parseFloat(item.priceUsd)
+                    }));
+
+                    // Hacim verilerini çek
+                    fetchVolumeData(cryptoId, startDate, now, 'd1', prices);
+                })
+                .catch(error => {
+                    console.error("Maksimum geçmiş verisi alınamadı:", error);
+                    document.getElementById('errorMessage').textContent = "Maksimum geçmiş verisi alınamadı: " + error.message;
+                    document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('loading').style.display = 'none';
+                });
+        }
+
+        // Grafiği güncelleyen fonksiyon
+        function updateChart(priceData, isMaxHistory = false, cryptoId) {
+            const labels = [];
+            const prices = [];
+
+            priceData.forEach(item => {
+                const date = new Date(item[0]);
+                labels.push(date.toLocaleDateString());
+                prices.push(item[1]);
+            });
+
+            const ctx = document.getElementById('cryptoChart').getContext('2d');
+
+            if (cryptoChart) {
+                cryptoChart.data.labels = labels;
+                cryptoChart.data.datasets[0].data = prices;
+                cryptoChart.update();
+            } else {
+                cryptoChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Fiyat (USD)',
+                            data: prices,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${cryptoId.charAt(0).toUpperCase() + cryptoId.slice(1)} Fiyat Grafiği`
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Debug bilgisini gösteren/gizleyen fonksiyon
+        function toggleDebugInfo() {
+            const debugInfo = document.getElementById('debugInfo');
+            if (debugInfo.style.display === 'none' || debugInfo.style.display === '') {
+                debugInfo.style.display = 'block';
+                debugInfo.innerHTML = `
+                    Seçilen Kripto: ${currentCrypto}
+                    Zaman Dilimi: ${currentTimeFrame.days} gün
+                    Aralık: ${currentTimeFrame.interval}
+                    Veri Sayısı: ${chartPriceData.length}
+                `;
+            } else {
+                debugInfo.style.display = 'none';
+            }
+        }
+
+        // Analiz aracını açan fonksiyon
+        function openAnalyzerWindow() {
+            const analyzerTool = document.getElementById('analyzerTool');
+            analyzerTool.style.display = 'block';
+            
+            // Analiz verilerini otomatik olarak güncelle
+            updateAnalyzerData();
+        }
+// Analiz verilerini güncelleyen fonksiyon
+        function updateAnalyzerData() {
+            const analyzerLoadingIndicator = document.getElementById('analyzerLoadingIndicator');
+            const analyzerReportContainer = document.getElementById('analyzerReportContainer');
+            const analyzerSummaryText = document.getElementById('analyzerSummaryText');
+            const analyzerLastUpdated = document.getElementById('analyzerLastUpdated');
+            const analyzerRsiValue = document.getElementById('analyzerRsiValue');
+            const analyzerMacdValue = document.getElementById('analyzerMacdValue');
+            const analyzerMaValue = document.getElementById('analyzerMaValue');
+            const analyzerBollingerValue = document.getElementById('analyzerBollingerValue');
+            const analyzerVolumeValue = document.getElementById('analyzerVolumeValue');
+            const analyzerMomentumValue = document.getElementById('analyzerMomentumValue');
+            const analyzerSupportResistanceTable = document.getElementById('analyzerSupportResistanceTable').getElementsByTagName('tbody')[0];
+            const analyzerPatternsTable = document.getElementById('analyzerPatternsTable').getElementsByTagName('tbody')[0];
+            const analyzerTrendAnalysis = document.getElementById('analyzerTrendAnalysis');
+            const analyzerTradingRecommendations = document.getElementById('analyzerTradingRecommendations');
+            const analyzerRiskManagement = document.getElementById('analyzerRiskManagement');
+            const analyzerRiskLevelIndicator = document.getElementById('analyzerRiskLevelIndicator');
+
+            analyzerLoadingIndicator.classList.remove('analyzer-hidden');
+            analyzerReportContainer.classList.add('analyzer-hidden');
+
+            // Fiyat verilerini al
+            const prices = chartPriceData.map(data => data.price);
+            
+            if (prices.length === 0) {
+                analyzerSummaryText.textContent = "Analiz için yeterli veri yok. Lütfen başka bir zaman dilimi seçin.";
+                analyzerLoadingIndicator.classList.add('analyzer-hidden');
+                analyzerReportContainer.classList.remove('analyzer-hidden');
+                return;
+            }
+
+            // Teknik göstergeleri hesapla
+            const rsi = calculateRSI(prices, 14);
+            const macd = calculateMACD(prices);
+            const ma50 = calculateMA(prices, 50);
+            const ma200 = calculateMA(prices, 200);
+            const bollinger = calculateBollingerBands(prices, 20);
+            
+            // Hacim değişimi hesapla
+            let volumeChange = 0;
+            if (chartVolumeData.length > 1) {
+                const recentVolumes = chartVolumeData.slice(-5); // Son 5 hacim verisi
+                const avgRecentVolume = recentVolumes.reduce((sum, item) => sum + item.volume, 0) / recentVolumes.length;
+                const prevVolumes = chartVolumeData.slice(-10, -5); // Önceki 5 hacim verisi
+                const avgPrevVolume = prevVolumes.length > 0 ? 
+                    prevVolumes.reduce((sum, item) => sum + item.volume, 0) / prevVolumes.length : avgRecentVolume;
+                volumeChange = ((avgRecentVolume - avgPrevVolume) / avgPrevVolume) * 100;
+            }
+            
+            // Momentum hesapla
+            const momentum = calculateMomentum(prices, 10);
+            
+            // Destek ve direnç seviyelerini hesapla
+            const supportResistanceLevels = findSupportResistanceLevels(prices);
+            
+            // Formasyonları tespit et
+            const patterns = detectChartPatterns(prices);
+            
+            // Trend analizi yap
+            const trendAnalysis = analyzeTrend(prices, ma50, ma200);
+            
+            // Risk skorunu hesapla
+            const riskScore = calculateRiskScore(prices, rsi, macd, trendAnalysis);
+            
+            // Alım-satım önerilerini oluştur
+            const tradingRecommendations = generateTradingRecommendations(rsi, macd, trendAnalysis, riskScore, patterns);
+            
+            // Risk yönetimi önerilerini oluştur
+            const riskManagement = generateRiskManagement(prices, riskScore);
+
+            // RSI değerini güncelle ve renklendirme yap
+            analyzerRsiValue.textContent = rsi.toFixed(2);
+            if (rsi > 70) {
+                analyzerRsiValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerRsiValue.textContent += " (Aşırı Alım)";
+            } else if (rsi < 30) {
+                analyzerRsiValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerRsiValue.textContent += " (Aşırı Satım)";
+            } else {
+                analyzerRsiValue.className = "analyzer-indicator-value analyzer-value-neutral";
+                analyzerRsiValue.textContent += " (Nötr)";
+            }
+
+            // MACD değerini güncelle ve renklendirme yap
+            analyzerMacdValue.textContent = macd.toFixed(2);
+            if (macd > 0) {
+                analyzerMacdValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerMacdValue.textContent += " (Yükseliş Sinyali)";
+            } else {
+                analyzerMacdValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerMacdValue.textContent += " (Düşüş Sinyali)";
+            }
+
+            // Hareketli Ortalama değerlerini güncelle ve renklendirme yap
+            analyzerMaValue.textContent = `50: $${ma50.toFixed(2)}, 200: $${ma200.toFixed(2)}`;
+            if (ma50 > ma200) {
+                analyzerMaValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerMaValue.textContent += " (Altın Çapraz)";
+            } else if (ma50 < ma200) {
+                analyzerMaValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerMaValue.textContent += " (Ölüm Çaprazı)";
+            } else {
+                analyzerMaValue.className = "analyzer-indicator-value analyzer-value-neutral";
+            }
+
+            // Bollinger Bantları değerlerini güncelle
+            const currentPrice = prices[prices.length - 1];
+            analyzerBollingerValue.textContent = `Üst: $${bollinger.upper.toFixed(2)}, Orta: $${bollinger.middle.toFixed(2)}, Alt: $${bollinger.lower.toFixed(2)}`;
+            if (currentPrice > bollinger.upper) {
+                analyzerBollingerValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerBollingerValue.textContent += " (Aşırı Alım)";
+            } else if (currentPrice < bollinger.lower) {
+                analyzerBollingerValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerBollingerValue.textContent += " (Aşırı Satım)";
+            } else {
+                analyzerBollingerValue.className = "analyzer-indicator-value analyzer-value-neutral";
+                analyzerBollingerValue.textContent += " (Nötr)";
+            }
+
+            // Hacim değişimi değerini güncelle ve renklendirme yap
+            analyzerVolumeValue.textContent = volumeChange.toFixed(2) + "%";
+            if (volumeChange > 10) {
+                analyzerVolumeValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerVolumeValue.textContent += " (Yüksek Hacim)";
+            } else if (volumeChange < -10) {
+                analyzerVolumeValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerVolumeValue.textContent += " (Düşük Hacim)";
+            } else {
+                analyzerVolumeValue.className = "analyzer-indicator-value analyzer-value-neutral";
+                analyzerVolumeValue.textContent += " (Normal Hacim)";
+            }
+
+            // Momentum değerini güncelle ve renklendirme yap
+            analyzerMomentumValue.textContent = momentum.toFixed(2);
+            if (momentum > 0) {
+                analyzerMomentumValue.className = "analyzer-indicator-value analyzer-value-positive";
+                analyzerMomentumValue.textContent += " (Pozitif)";
+            } else {
+                analyzerMomentumValue.className = "analyzer-indicator-value analyzer-value-negative";
+                analyzerMomentumValue.textContent += " (Negatif)";
+            }
+
+            // Destek ve Direnç Seviyeleri tablosunu güncelle
+            analyzerSupportResistanceTable.innerHTML = '';
+            supportResistanceLevels.forEach(level => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${level.type}</td>
+                    <td>$${level.level.toFixed(2)}</td>
+                    <td>${level.strength}</td>
+                `;
+                analyzerSupportResistanceTable.appendChild(row);
+            });
+
+            // Formasyonlar tablosunu güncelle
+            analyzerPatternsTable.innerHTML = '';
+            if (patterns.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4">Belirgin bir formasyon tespit edilemedi.</td>`;
+                analyzerPatternsTable.appendChild(row);
+            } else {
+                patterns.forEach(pattern => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${pattern.name}</td>
+                        <td>${pattern.signal}</td>
+                        <td>${pattern.reliability}</td>
+                        <td>$${pattern.breakoutPrice.toFixed(2)}</td>
+                    `;
+                    analyzerPatternsTable.appendChild(row);
+                });
+            }
+
+            // Trend Analizi bölümünü güncelle
+            analyzerTrendAnalysis.innerHTML = `
+                <p><strong>Mevcut trend:</strong> ${trendAnalysis.trend}</p>
+                <p><strong>Trend gücü:</strong> ${trendAnalysis.strength}</p>
+                <p><strong>Trend süresi:</strong> ${trendAnalysis.duration}</p>
+            `;
+
+            // Risk Skoru göstergesini güncelle
+            analyzerRiskLevelIndicator.style.width = `${riskScore}%`;
+            analyzerRiskLevelIndicator.querySelector('.analyzer-risk-label').textContent = `${riskScore}/100`;
+            
+            if (riskScore < 40) {
+                analyzerRiskLevelIndicator.className = "analyzer-risk-level analyzer-risk-low-level";
+                document.getElementById('analyzerAlertBox').className = "analyzer-alert-box analyzer-alert-low";
+                document.getElementById('analyzerAlertBox').textContent = "Düşük seviye volatilite tespit edildi. Piyasa nispeten sakin.";
+            } else if (riskScore < 70) {
+                analyzerRiskLevelIndicator.className = "analyzer-risk-level analyzer-risk-medium-level";
+                document.getElementById('analyzerAlertBox').className = "analyzer-alert-box analyzer-alert-medium";
+                document.getElementById('analyzerAlertBox').textContent = "Orta seviye volatilite tespit edildi. Dikkatli olunmalı.";
+            } else {
+                analyzerRiskLevelIndicator.className = "analyzer-risk-level analyzer-risk-high-level";
+                document.getElementById('analyzerAlertBox').className = "analyzer-alert-box analyzer-alert-high";
+                document.getElementById('analyzerAlertBox').textContent = "Yüksek seviye volatilite tespit edildi! Yüksek risk!";
+            }
+
+            // İşlem Önerileri bölümünü güncelle
+            analyzerTradingRecommendations.innerHTML = tradingRecommendations;
+
+            // Risk Yönetimi bölümünü güncelle
+            analyzerRiskManagement.innerHTML = riskManagement;
+
+            // Analiz özetini güncelle
+            analyzerSummaryText.textContent = generateAnalysisSummary(rsi, macd, trendAnalysis, patterns, riskScore);
+
+            // Son güncelleme tarihini güncelle
+            const now = new Date();
+            analyzerLastUpdated.textContent = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+
+            // Yükleme göstergesini gizle ve raporu göster
+            analyzerLoadingIndicator.classList.add('analyzer-hidden');
+            analyzerReportContainer.classList.remove('analyzer-hidden');
+        }
+
+        // RSI (Göreceli Güç Endeksi) hesaplama fonksiyonu
+        function calculateRSI(prices, period) {
+            if (prices.length < period + 1) {
+                return 50; // Yeterli veri yoksa varsayılan değer
+            }
+
+            let gains = 0;
+            let losses = 0;
+
+            // İlk periyot için kazanç ve kayıpları hesapla
+            for (let i = 1; i <= period; i++) {
+                const change = prices[i] - prices[i - 1];
+                if (change >= 0) {
+                    gains += change;
+                } else {
+                    losses -= change; // Negatif değeri pozitife çevir
+                }
+            }
+
+            // İlk ortalama kazanç ve kayıpları hesapla
+            let avgGain = gains / period;
+            let avgLoss = losses / period;
+
+            // Kalan veriler için RSI hesapla
+            for (let i = period + 1; i < prices.length; i++) {
+                const change = prices[i] - prices[i - 1];
+                let currentGain = 0;
+                let currentLoss = 0;
+
+                if (change >= 0) {
+                    currentGain = change;
+                } else {
+                    currentLoss = -change;
+                }
+
+                // Ortalama kazanç ve kayıpları güncelle (Wilder'ın yumuşatma formülü)
+                avgGain = ((avgGain * (period - 1)) + currentGain) / period;
+                avgLoss = ((avgLoss * (period - 1)) + currentLoss) / period;
+            }
+
+            // RS ve RSI hesapla
+            if (avgLoss === 0) {
+                return 100; // Kayıp yoksa RSI 100'dür
+            }
+            
+            const rs = avgGain / avgLoss;
+            return 100 - (100 / (1 + rs));
+        }
+
+        // MACD (Hareketli Ortalama Yakınsama Diverjansı) hesaplama fonksiyonu
+        function calculateMACD(prices) {
+            if (prices.length < 26) {
+                return 0; // Yeterli veri yoksa varsayılan değer
+            }
+
+            const shortPeriod = 12;
+            const longPeriod = 26;
+            const signalPeriod = 9;
+
+            // EMA hesapla
+            const shortEMA = calculateEMA(prices, shortPeriod);
+            const longEMA = calculateEMA(prices, longPeriod);
+
+            // MACD çizgisi = Kısa dönem EMA - Uzun dönem EMA
+            const macdLine = shortEMA - longEMA;
+
+            // Sinyal çizgisi = MACD çizgisinin 9 günlük EMA'sı
+            // Basitleştirmek için, MACD çizgisinin son değerini kullanıyoruz
+            return macdLine;
+        }
+
+        // EMA (Üstel Hareketli Ortalama) hesaplama fonksiyonu
+        function calculateEMA(prices, period) {
+            if (prices.length < period) {
+                return prices[prices.length - 1]; // Yeterli veri yoksa son fiyatı döndür
+            }
+
+            // İlk SMA (Basit Hareketli Ortalama) hesapla
+            let sum = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                sum += prices[i];
+            }
+            const sma = sum / period;
+
+            // Yumuşatma faktörü
+            const multiplier = 2 / (period + 1);
+
+            // EMA hesapla
+            let ema = sma;
+            for (let i = prices.length - period + 1; i < prices.length; i++) {
+                ema = (prices[i] - ema) * multiplier + ema;
+            }
+
+            return ema;
+        }
+
+        // MA (Hareketli Ortalama) hesaplama fonksiyonu
+        function calculateMA(prices, period) {
+            if (prices.length < period) {
+                return prices[prices.length - 1]; // Yeterli veri yoksa son fiyatı döndür
+            }
+
+            let sum = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                sum += prices[i];
+            }
+            return sum / period;
+        }
+
+        // Bollinger Bantları hesaplama fonksiyonu
+        function calculateBollingerBands(prices, period) {
+            if (prices.length < period) {
+                const lastPrice = prices[prices.length - 1];
+                return {
+                    upper: lastPrice * 1.02,
+                    middle: lastPrice,
+                    lower: lastPrice * 0.98
+                };
+            }
+
+            // Orta bant (SMA)
+            const middle = calculateMA(prices, period);
+
+            // Standart sapma hesapla
+            let sum = 0;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                sum += Math.pow(prices[i] - middle, 2);
+            }
+            const stdDev = Math.sqrt(sum / period);
+
+            // Üst ve alt bantları hesapla
+            const upper = middle + (2 * stdDev);
+            const lower = middle - (2 * stdDev);
+
+            return { upper, middle, lower };
+        }
+
+        // Momentum hesaplama fonksiyonu
+        function calculateMomentum(prices, period) {
+            if (prices.length <= period) {
+                return 0; // Yeterli veri yoksa varsayılan değer
+            }
+            
+            // Momentum = Mevcut fiyat - n-periyot önceki fiyat
+            return prices[prices.length - 1] - prices[prices.length - 1 - period];
+        }
+
+        // Destek ve direnç seviyelerini bulan fonksiyon
+        function findSupportResistanceLevels(prices) {
+            if (prices.length < 10) {
+                return []; // Yeterli veri yoksa boş dizi döndür
+            }
+
+            const levels = [];
+            const recentPrices = prices.slice(-30); // Son 30 fiyat verisi
+            
+            // En yüksek ve en düşük fiyatları bul
+            const maxPrice = Math.max(...recentPrices);
+            const minPrice = Math.min(...recentPrices);
+            const currentPrice = prices[prices.length - 1];
+            
+            // Direnç seviyeleri
+            if (maxPrice > currentPrice) {
+                levels.push({
+                    type: "Direnç",
+                    level: maxPrice,
+                    strength: "Güçlü"
+                });
+                
+                // Ara direnç seviyesi
+                const midResistance = currentPrice + ((maxPrice - currentPrice) * 0.5);
+                levels.push({
+                    type: "Direnç",
+                    level: midResistance,
+                    strength: "Orta"
+                });
+            }
+            
+            // Destek seviyeleri
+            if (minPrice < currentPrice) {
+                levels.push({
+                    type: "Destek",
+                    level: minPrice,
+                    strength: "Güçlü"
+                });
+                
+                // Ara destek seviyesi
+                const midSupport = currentPrice - ((currentPrice - minPrice) * 0.5);
+                levels.push({
+                    type: "Destek",
+                    level: midSupport,
+                    strength: "Orta"
+                });
+            }
+            
+            // Psikolojik seviyeler (yuvarlak sayılar)
+            const priceOrder = Math.floor(Math.log10(currentPrice));
+            const roundNumber = Math.floor(currentPrice / Math.pow(10, priceOrder)) * Math.pow(10, priceOrder);
+            
+            if (roundNumber < currentPrice && !levels.some(l => Math.abs(l.level - roundNumber) / currentPrice < 0.01)) {
+                levels.push({
+                    type: "Destek",
+                    level: roundNumber,
+                    strength: "Psikolojik"
+                });
+            } else if (roundNumber > currentPrice && !levels.some(l => Math.abs(l.level - roundNumber) / currentPrice < 0.01)) {
+                levels.push({
+                    type: "Direnç",
+                    level: roundNumber,
+                    strength: "Psikolojik"
+                });
+            }
+            
+            return levels;
+        }
+
+        // Grafik formasyonlarını tespit eden fonksiyon
+        function detectChartPatterns(prices) {
+            if (prices.length < 20) {
+                return []; // Yeterli veri yoksa boş dizi döndür
+            }
+
+            const patterns = [];
+            const recentPrices = prices.slice(-20); // Son 20 fiyat verisi
+            const currentPrice = prices[prices.length - 1];
+            
+            // Çift Dip Formasyonu Tespiti
+            const doubleBotDetected = detectDoubleBottom(recentPrices);
+            if (doubleBotDetected) {
+                patterns.push({
+                    name: "Çift Dip",
+                    signal: "Alış",
+                    reliability: "Yüksek",
+                    breakoutPrice: currentPrice * 1.02 // %2 üzerinde kırılma fiyatı
+                });
+            }
+            
+            // Çift Tepe Formasyonu Tespiti
+            const doubleTopDetected = detectDoubleTop(recentPrices);
+            if (doubleTopDetected) {
+                patterns.push({
+                    name: "Çift Tepe",
+                    signal: "Satış",
+                    reliability: "Yüksek",
+                    breakoutPrice: currentPrice * 0.98 // %2 altında kırılma fiyatı
+                });
+            }
+            
+            // Baş ve Omuz Formasyonu Tespiti
+            const headAndShouldersDetected = detectHeadAndShoulders(recentPrices);
+            if (headAndShouldersDetected) {
+                patterns.push({
+                    name: "Baş ve Omuzlar",
+                    signal: "Satış",
+                    reliability: "Orta",
+                    breakoutPrice: currentPrice * 0.97 // %3 altında kırılma fiyatı
+                });
+            }
+            
+            // Ters Baş ve Omuz Formasyonu Tespiti
+            const inverseHeadAndShouldersDetected = detectInverseHeadAndShoulders(recentPrices);
+            if (inverseHeadAndShouldersDetected) {
+                patterns.push({
+                    name: "Ters Baş ve Omuzlar",
+                    signal: "Alış",
+                    reliability: "Orta",
+                    breakoutPrice: currentPrice * 1.03 // %3 üzerinde kırılma fiyatı
+                });
+            }
+            
+            // Bayrak Formasyonu Tespiti
+            const flagDetected = detectFlag(recentPrices);
+            if (flagDetected) {
+                patterns.push({
+                    name: "Bayrak",
+                    signal: "Trend Devamı",
+                    reliability: "Orta",
+                    breakoutPrice: flagDetected.direction === "up" ? currentPrice * 1.01 : currentPrice * 0.99
+                });
+            }
+            
+            return patterns;
+        }
+
+        // Çift Dip formasyonu tespit fonksiyonu
+        function detectDoubleBottom(prices) {
+            // Basit bir çift dip tespiti
+            // Gerçek uygulamada daha karmaşık algoritmalar kullanılmalıdır
+            
+            // Yerel minimumları bul
+            const localMins = [];
+            for (let i = 2; i < prices.length - 2; i++) {
+                if (prices[i] < prices[i-1] && prices[i] < prices[i-2] && 
+                    prices[i] < prices[i+1] && prices[i] < prices[i+2]) {
+                    localMins.push({ index: i, value: prices[i] });
+                }
+            }
+            
+            // En az 2 yerel minimum gerekli
+            if (localMins.length < 2) return false;
+            
+            // Son iki yerel minimumu kontrol et
+            const min1 = localMins[localMins.length - 2];
+            const min2 = localMins[localMins.length - 1];
+            
+            // İki minimum arasında yeterli mesafe olmalı
+            if (min2.index - min1.index < 3) return false;
+            
+            // İki minimum değeri yaklaşık olarak aynı olmalı
+            const priceDiff = Math.abs(min1.value - min2.value) / min1.value;
+            if (priceDiff > 0.05) return false; // %5'ten fazla fark varsa çift dip değil
+            
+            // İki minimum arasında bir tepe olmalı
+            let hasMiddlePeak = false;
+            for (let i = min1.index + 1; i < min2.index; i++) {
+                if (prices[i] > min1.value * 1.05 && prices[i] > min2.value * 1.05) {
+                    hasMiddlePeak = true;
+                    break;
+                }
+            }
+            
+            return hasMiddlePeak;
+        }
+
+        // Çift Tepe formasyonu tespit fonksiyonu
+        function detectDoubleTop(prices) {
+            // Basit bir çift tepe tespiti
+            // Gerçek uygulamada daha karmaşık algoritmalar kullanılmalıdır
+            
+            // Yerel maksimumları bul
+            const localMaxs = [];
+            for (let i = 2; i < prices.length - 2; i++) {
+                if (prices[i] > prices[i-1] && prices[i] > prices[i-2] && 
+                    prices[i] > prices[i+1] && prices[i] > prices[i+2]) {
+                    localMaxs.push({ index: i, value: prices[i] });
+                }
+            }
+            
+            // En az 2 yerel maksimum gerekli
+            if (localMaxs.length < 2) return false;
+            
+            // Son iki yerel maksimumu kontrol et
+            const max1 = localMaxs[localMaxs.length - 2];
+            const max2 = localMaxs[localMaxs.length - 1];
+            
+            // İki maksimum arasında yeterli mesafe olmalı
+            if (max2.index - max1.index < 3) return false;
+            
+            // İki maksimum değeri yaklaşık olarak aynı olmalı
+            const priceDiff = Math.abs(max1.value - max2.value) / max1.value;
+            if (priceDiff > 0.05) return false; // %5'ten fazla fark varsa çift tepe değil
+            
+            // İki maksimum arasında bir dip olmalı
+            let hasMiddleValley = false;
+            for (let i = max1.index + 1; i < max2.index; i++) {
+                if (prices[i] < max1.value * 0.95 && prices[i] < max2.value * 0.95) {
+                    hasMiddleValley = true;
+                    break;
+                }
+            }
+            
+            return hasMiddleValley;
+        }
+
+        // Baş ve Omuzlar formasyonu tespit fonksiyonu
+        function detectHeadAndShoulders(prices) {
+            // Basit bir baş ve omuzlar tespiti
+            // Gerçek uygulamada daha karmaşık algoritmalar kullanılmalıdır
+            
+            // Yerel maksimumları bul
+            const localMaxs = [];
+            for (let i = 2; i < prices.length - 2; i++) {
+                if (prices[i] > prices[i-1] && prices[i] > prices[i-2] && 
+                    prices[i] > prices[i+1] && prices[i] > prices[i+2]) {
+                    localMaxs.push({ index: i, value: prices[i] });
+                }
+            }
+            
+            // En az 3 yerel maksimum gerekli
+            if (localMaxs.length < 3) return false;
+            
+            // Son üç yerel maksimumu kontrol et
+            const shoulder1 = localMaxs[localMaxs.length - 3];
+            const head = localMaxs[localMaxs.length - 2];
+            const shoulder2 = localMaxs[localMaxs.length - 1];
+            
+            // Baş, omuzlardan yüksek olmalı
+            if (head.value <= shoulder1.value || head.value <= shoulder2.value) return false;
+            
+            // İki omuz yaklaşık aynı seviyede olmalı
+            const shoulderDiff = Math.abs(shoulder1.value - shoulder2.value) / shoulder1.value;
+            if (shoulderDiff > 0.1) return false; // %10'dan fazla fark varsa baş ve omuzlar değil
+            
+            return true;
+        }
+
+        // Ters Baş ve Omuzlar formasyonu tespit fonksiyonu
+        function detectInverseHeadAndShoulders(prices) {
+            // Basit bir ters baş ve omuzlar tespiti
+            // Gerçek uygulamada daha karmaşık algoritmalar kullanılmalıdır
+            
+            // Yerel minimumları bul
+            const localMins = [];
+            for (let i = 2; i < prices.length - 2; i++) {
+                if (prices[i] < prices[i-1] && prices[i] < prices[i-2] && 
+                    prices[i] < prices[i+1] && prices[i] < prices[i+2]) {
+                    localMins.push({ index: i, value: prices[i] });
+                }
+            }
+// En az 3 yerel minimum gerekli
+            if (localMins.length < 3) return false;
+            
+            // Son üç yerel minimumu kontrol et
+            const shoulder1 = localMins[localMins.length - 3];
+            const head = localMins[localMins.length - 2];
+            const shoulder2 = localMins[localMins.length - 1];
+            
+            // Baş, omuzlardan düşük olmalı
+            if (head.value >= shoulder1.value || head.value >= shoulder2.value) return false;
+            
+            // İki omuz yaklaşık aynı seviyede olmalı
+            const shoulderDiff = Math.abs(shoulder1.value - shoulder2.value) / shoulder1.value;
+            if (shoulderDiff > 0.1) return false; // %10'dan fazla fark varsa ters baş ve omuzlar değil
+            
+            return true;
+        }
+
+        // Bayrak formasyonu tespit fonksiyonu
+        function detectFlag(prices) {
+            // Basit bir bayrak formasyonu tespiti
+            // Gerçek uygulamada daha karmaşık algoritmalar kullanılmalıdır
+            
+            // Trend yönünü belirle
+            const firstHalf = prices.slice(0, Math.floor(prices.length / 2));
+            const secondHalf = prices.slice(Math.floor(prices.length / 2));
+            
+            const firstHalfAvg = firstHalf.reduce((sum, price) => sum + price, 0) / firstHalf.length;
+            const secondHalfAvg = secondHalf.reduce((sum, price) => sum + price, 0) / secondHalf.length;
+            
+            const direction = secondHalfAvg > firstHalfAvg ? "up" : "down";
+            
+            // Bayrak direği (güçlü hareket)
+            const poleStart = prices[0];
+            const poleEnd = prices[Math.floor(prices.length / 3)];
+            const poleMove = Math.abs(poleEnd - poleStart) / poleStart;
+            
+            // Bayrak (konsolidasyon)
+            const flagStart = prices[Math.floor(prices.length / 3)];
+            const flagEnd = prices[Math.floor(prices.length * 2 / 3)];
+            const flagMove = Math.abs(flagEnd - flagStart) / flagStart;
+            
+            // Bayrak çubuğu (kırılma)
+            const breakoutStart = prices[Math.floor(prices.length * 2 / 3)];
+            const breakoutEnd = prices[prices.length - 1];
+            const breakoutMove = Math.abs(breakoutEnd - breakoutStart) / breakoutStart;
+            
+            // Bayrak formasyonu kriterleri
+            if (poleMove > 0.05 && flagMove < 0.03 && breakoutMove > 0.02) {
+                return { direction };
+            }
+            
+            return false;
+        }
+
+        // Trend analizi yapan fonksiyon
+        function analyzeTrend(prices, ma50, ma200) {
+            if (prices.length < 10) {
+                return {
+                    trend: "Belirsiz",
+                    strength: "Zayıf",
+                    duration: "Kısa"
+                };
+            }
+            
+            // Son 10 fiyat için trend yönünü belirle
+            const recentPrices = prices.slice(-10);
+            let upCount = 0;
+            let downCount = 0;
+            
+            for (let i = 1; i < recentPrices.length; i++) {
+                if (recentPrices[i] > recentPrices[i-1]) {
+                    upCount++;
+                } else if (recentPrices[i] < recentPrices[i-1]) {
+                    downCount++;
+                }
+            }
+            
+            // Trend yönü
+            let trend;
+            if (upCount > downCount * 2) {
+                trend = "Güçlü Yükseliş";
+            } else if (upCount > downCount) {
+                trend = "Yükseliş";
+            } else if (downCount > upCount * 2) {
+                trend = "Güçlü Düşüş";
+            } else if (downCount > upCount) {
+                trend = "Düşüş";
+            } else {
+                trend = "Yatay";
+            }
+            
+            // Trend gücü
+            let strength;
+            const volatility = calculateVolatility(prices);
+            if (volatility > 0.05) {
+                strength = "Güçlü";
+            } else if (volatility > 0.02) {
+                strength = "Orta";
+            } else {
+                strength = "Zayıf";
+            }
+            
+            // Trend süresi
+            let duration;
+            if (prices.length > 100) {
+                // Uzun vadeli trend için MA50 ve MA200 karşılaştırması
+                if (ma50 > ma200 * 1.05) {
+                    duration = "Uzun Vadeli Yükseliş";
+                } else if (ma50 < ma200 * 0.95) {
+                    duration = "Uzun Vadeli Düşüş";
+                } else {
+                    duration = "Orta Vadeli";
+                }
+            } else {
+                duration = "Kısa Vadeli";
+            }
+            
+            return { trend, strength, duration };
+        }
+
+        // Volatilite hesaplama fonksiyonu
+        function calculateVolatility(prices) {
+            if (prices.length < 2) return 0;
+            
+            // Günlük getiri hesapla
+            const returns = [];
+            for (let i = 1; i < prices.length; i++) {
+                returns.push((prices[i] - prices[i-1]) / prices[i-1]);
+            }
+            
+            // Ortalama getiri
+            const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+            
+            // Standart sapma (volatilite)
+            const squaredDiffs = returns.map(ret => Math.pow(ret - avgReturn, 2));
+            const variance = squaredDiffs.reduce((sum, diff) => sum + diff, 0) / squaredDiffs.length;
+            
+            return Math.sqrt(variance);
+        }
+
+        // Risk skoru hesaplama fonksiyonu
+        function calculateRiskScore(prices, rsi, macd, trendAnalysis) {
+            // Volatilite bileşeni (0-40 puan)
+            const volatility = calculateVolatility(prices);
+            const volatilityScore = Math.min(40, Math.round(volatility * 800)); // %5 volatilite = 40 puan
+            
+            // RSI bileşeni (0-20 puan)
+            let rsiScore = 0;
+            if (rsi > 70 || rsi < 30) {
+                rsiScore = 20; // Aşırı alım/satım = yüksek risk
+            } else if (rsi > 60 || rsi < 40) {
+                rsiScore = 10; // Orta risk
+            }
+            
+            // MACD bileşeni (0-20 puan)
+            const macdScore = Math.min(20, Math.abs(macd) * 10);
+            
+            // Trend bileşeni (0-20 puan)
+            let trendScore = 0;
+            if (trendAnalysis.trend.includes("Güçlü")) {
+                trendScore = 15;
+            } else if (trendAnalysis.trend !== "Yatay") {
+                trendScore = 10;
+            }
+            
+            if (trendAnalysis.strength === "Güçlü") {
+                trendScore += 5;
+            }
+            
+            // Toplam risk skoru (0-100)
+            return Math.min(100, volatilityScore + rsiScore + macdScore + trendScore);
+        }
+
+        // İşlem önerileri oluşturan fonksiyon
+        function generateTradingRecommendations(rsi, macd, trendAnalysis, riskScore, patterns) {
+            let recommendations = `<p><strong>Risk Skoru:</strong> ${riskScore}/100 - `;
+            
+            if (riskScore < 40) {
+                recommendations += "Düşük risk seviyesi. İşlem yapmak için uygun bir ortam.</p>";
+            } else if (riskScore < 70) {
+                recommendations += "Orta risk seviyesi. Dikkatli olunmalı, ancak işlem yapılabilir.</p>";
+            } else {
+                recommendations += "Yüksek risk seviyesi. İşlem yapmak önerilmez veya çok dikkatli olunmalıdır.</p>";
+            }
+            
+            // RSI bazlı öneriler
+            recommendations += "<p><strong>RSI Göstergesi:</strong> ";
+            if (rsi > 70) {
+                recommendations += "Aşırı alım bölgesinde. Satış fırsatı olabilir, ancak trend güçlüyse dikkatli olunmalı.</p>";
+            } else if (rsi < 30) {
+                recommendations += "Aşırı satım bölgesinde. Alım fırsatı olabilir, ancak düşüş trendi güçlüyse dikkatli olunmalı.</p>";
+            } else if (rsi > 50) {
+                recommendations += "Yükseliş eğiliminde. Alım pozisyonları düşünülebilir.</p>";
+            } else {
+                recommendations += "Düşüş eğiliminde. Satış pozisyonları düşünülebilir.</p>";
+            }
+            
+            // MACD bazlı öneriler
+            recommendations += "<p><strong>MACD Göstergesi:</strong> ";
+            if (macd > 0) {
+                recommendations += "Pozitif. Yükseliş sinyali veriyor.</p>";
+            } else {
+                recommendations += "Negatif. Düşüş sinyali veriyor.</p>";
+            }
+            
+            // Trend bazlı öneriler
+            recommendations += `<p><strong>Trend Analizi:</strong> ${trendAnalysis.trend} trendi ${trendAnalysis.strength} güçte ve ${trendAnalysis.duration}.</p>`;
+            
+            // Formasyon bazlı öneriler
+            if (patterns.length > 0) {
+                recommendations += "<p><strong>Formasyon Önerileri:</strong></p><ul>";
+                patterns.forEach(pattern => {
+                    recommendations += `<li><strong>${pattern.name}:</strong> ${pattern.signal} sinyali veriyor. Güvenilirlik: ${pattern.reliability}. Kırılma fiyatı: $${pattern.breakoutPrice.toFixed(2)}</li>`;
+                });
+                recommendations += "</ul>";
+            }
+            
+            // Genel öneri
+            recommendations += "<p><strong>Genel Öneri:</strong> ";
+            
+            if (riskScore >= 70) {
+                recommendations += "Yüksek risk nedeniyle işlem yapmaktan kaçınılması önerilir. Piyasa volatilitesi yüksek.</p>";
+            } else if ((rsi < 30 || (patterns.some(p => p.signal === "Alış") && patterns.some(p => p.reliability === "Yüksek"))) && macd > -1 && !trendAnalysis.trend.includes("Düşüş")) {
+                recommendations += "Alım fırsatı olabilir. Teknik göstergeler ve formasyonlar alım sinyali veriyor.</p>";
+            } else if ((rsi > 70 || (patterns.some(p => p.signal === "Satış") && patterns.some(p => p.reliability === "Yüksek"))) && macd < 1 && !trendAnalysis.trend.includes("Yükseliş")) {
+                recommendations += "Satış fırsatı olabilir. Teknik göstergeler ve formasyonlar satış sinyali veriyor.</p>";
+            } else if (trendAnalysis.trend.includes("Yükseliş") && rsi > 40 && rsi < 70 && macd > 0) {
+                recommendations += "Yükseliş trendi devam ediyor. Mevcut alım pozisyonları korunabilir veya yeni alım fırsatları değerlendirilebilir.</p>";
+            } else if (trendAnalysis.trend.includes("Düşüş") && rsi > 30 && rsi < 60 && macd < 0) {
+                recommendations += "Düşüş trendi devam ediyor. Mevcut satış pozisyonları korunabilir veya yeni satış fırsatları değerlendirilebilir.</p>";
+            } else {
+                recommendations += "Net bir sinyal bulunmuyor. Piyasanın daha belirgin bir yön göstermesi beklenebilir.</p>";
+            }
+            
+            return recommendations;
+        }
+
+        // Risk yönetimi önerileri oluşturan fonksiyon
+        function generateRiskManagement(prices, riskScore) {
+            const currentPrice = prices[prices.length - 1];
+            let riskManagement = "";
+            
+            // Stop-Loss önerileri
+            riskManagement += "<p><strong>Stop-Loss Önerileri:</strong></p>";
+            
+            if (riskScore < 40) {
+                // Düşük risk - daha geniş stop-loss
+                const stopLossPercentage = 5;
+                const stopLossPrice = currentPrice * (1 - stopLossPercentage / 100);
+                riskManagement += `<p>Düşük risk ortamında, pozisyonlarınız için %${stopLossPercentage} stop-loss kullanabilirsiniz.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen stop-loss seviyesi: $${stopLossPrice.toFixed(2)} (-%${stopLossPercentage})</p>`;
+            } else if (riskScore < 70) {
+                // Orta risk - orta stop-loss
+                const stopLossPercentage = 3;
+                const stopLossPrice = currentPrice * (1 - stopLossPercentage / 100);
+                riskManagement += `<p>Orta risk ortamında, pozisyonlarınız için %${stopLossPercentage} stop-loss kullanmanız önerilir.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen stop-loss seviyesi: $${stopLossPrice.toFixed(2)} (-%${stopLossPercentage})</p>`;
+            } else {
+                // Yüksek risk - sıkı stop-loss
+                const stopLossPercentage = 2;
+                const stopLossPrice = currentPrice * (1 - stopLossPercentage / 100);
+                riskManagement += `<p>Yüksek risk ortamında, pozisyonlarınız için %${stopLossPercentage} gibi sıkı bir stop-loss kullanmanız önerilir.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen stop-loss seviyesi: $${stopLossPrice.toFixed(2)} (-%${stopLossPercentage})</p>`;
+            }
+            
+            // Take-Profit önerileri
+            riskManagement += "<p><strong>Take-Profit Önerileri:</strong></p>";
+            
+            if (riskScore < 40) {
+                // Düşük risk - daha yüksek take-profit
+                const takeProfitPercentage = 15;
+                const takeProfitPrice = currentPrice * (1 + takeProfitPercentage / 100);
+                riskManagement += `<p>Düşük risk ortamında, pozisyonlarınız için %${takeProfitPercentage} take-profit hedefi belirleyebilirsiniz.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen take-profit seviyesi: $${takeProfitPrice.toFixed(2)} (+%${takeProfitPercentage})</p>`;
+            } else if (riskScore < 70) {
+                // Orta risk - orta take-profit
+                const takeProfitPercentage = 10;
+                const takeProfitPrice = currentPrice * (1 + takeProfitPercentage / 100);
+                riskManagement += `<p>Orta risk ortamında, pozisyonlarınız için %${takeProfitPercentage} take-profit hedefi belirleyebilirsiniz.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen take-profit seviyesi: $${takeProfitPrice.toFixed(2)} (+%${takeProfitPercentage})</p>`;
+            } else {
+                // Yüksek risk - daha düşük take-profit
+                const takeProfitPercentage = 5;
+                const takeProfitPrice = currentPrice * (1 + takeProfitPercentage / 100);
+                riskManagement += `<p>Yüksek risk ortamında, pozisyonlarınız için %${takeProfitPercentage} gibi daha muhafazakar bir take-profit hedefi belirleyebilirsiniz.</p>`;
+                riskManagement += `<p>Mevcut fiyat için önerilen take-profit seviyesi: $${takeProfitPrice.toFixed(2)} (+%${takeProfitPercentage})</p>`;
+            }
+            
+            // Pozisyon büyüklüğü önerileri
+            riskManagement += "<p><strong>Pozisyon Büyüklüğü Önerileri:</strong></p>";
+            
+            if (riskScore < 40) {
+                riskManagement += "<p>Düşük risk ortamında, sermayenizin %3-5'i kadar pozisyon açabilirsiniz.</p>";
+            } else if (riskScore < 70) {
+                riskManagement += "<p>Orta risk ortamında, sermayenizin %2-3'ü kadar pozisyon açmanız önerilir.</p>";
+            } else {
+                riskManagement += "<p>Yüksek risk ortamında, sermayenizin %1-2'si kadar pozisyon açmanız veya işlem yapmaktan kaçınmanız önerilir.</p>";
+            }
+            
+            // Risk/Ödül oranı
+            riskManagement += "<p><strong>Risk/Ödül Oranı:</strong></p>";
+            
+            if (riskScore < 40) {
+                riskManagement += "<p>Düşük risk ortamında, 1:3 veya daha yüksek bir risk/ödül oranı hedefleyebilirsiniz.</p>";
+            } else if (riskScore < 70) {
+                riskManagement += "<p>Orta risk ortamında, en az 1:2 risk/ödül oranı hedeflemeniz önerilir.</p>";
+            } else {
+                riskManagement += "<p>Yüksek risk ortamında, en az 1:3 risk/ödül oranı hedeflemeniz veya işlem yapmaktan kaçınmanız önerilir.</p>";
+            }
+            
+            return riskManagement;
+        }
+
+        // Analiz özeti oluşturan fonksiyon
+        function generateAnalysisSummary(rsi, macd, trendAnalysis, patterns, riskScore) {
+            let summary = "";
+            
+            // Trend özeti
+            summary += `${trendAnalysis.trend} trendi ${trendAnalysis.strength} güçte ve ${trendAnalysis.duration}. `;
+            
+            // Teknik göstergeler özeti
+            if (rsi > 70) {
+                summary += "RSI aşırı alım bölgesinde. ";
+            } else if (rsi < 30) {
+                summary += "RSI aşırı satım bölgesinde. ";
+            }
+            
+            if (macd > 0) {
+                summary += "MACD pozitif, yükseliş sinyali veriyor. ";
+            } else {
+                summary += "MACD negatif, düşüş sinyali veriyor. ";
+            }
+            
+            // Formasyon özeti
+            if (patterns.length > 0) {
+                summary += "Tespit edilen formasyonlar: ";
+                patterns.forEach((pattern, index) => {
+                    summary += `${pattern.name} (${pattern.signal})`;
+                    if (index < patterns.length - 1) {
+                        summary += ", ";
+                    } else {
+                        summary += ". ";
+                    }
+                });
+            }
+            
+            // Risk özeti
+            if (riskScore < 40) {
+                summary += "Düşük risk seviyesi, işlem yapmak için uygun bir ortam.";
+            } else if (riskScore < 70) {
+                summary += "Orta risk seviyesi, dikkatli olunmalı.";
+            } else {
+                summary += "Yüksek risk seviyesi, işlem yapmak önerilmez veya çok dikkatli olunmalıdır.";
+            }
+            
+            return summary;
+        }
+
+        // Analiz aracını kapatma ve küçültme işlevleri
+        document.getElementById('analyzerCloseButton').addEventListener('click', function() {
+            document.getElementById('analyzerTool').style.display = 'none';
+        });
+        
+        document.getElementById('analyzerMinimizeButton').addEventListener('click', function() {
+            const analyzerTool = document.getElementById('analyzerTool');
+            const analyzerMainContainer = document.getElementById('analyzerMainContainer');
+            
+            if (analyzerTool.classList.contains('analyzer-minimized')) {
+                analyzerTool.classList.remove('analyzer-minimized');
+                this.textContent = '_';
+            } else {
+                analyzerTool.classList.add('analyzer-minimized');
+                this.textContent = '□';
+            }
+        });
+        
+        // Analiz aracını sürüklenebilir yapma
+        const analyzerTool = document.getElementById('analyzerTool');
+        const analyzerDragHandle = document.querySelector('.analyzer-drag-handle');
+        
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        analyzerDragHandle.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            dragOffsetX = e.clientX - analyzerTool.getBoundingClientRect().left;
+            dragOffsetY = e.clientY - analyzerTool.getBoundingClientRect().top;
+        });
+        
+        document.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                analyzerTool.style.left = (e.clientX - dragOffsetX) + 'px';
+                analyzerTool.style.top = (e.clientY - dragOffsetY) + 'px';
+                analyzerTool.style.transform = 'none'; // Sürükleme sırasında transform'u kaldır
+            }
+        });
+        
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+    </script>
+</body>
+</html>
